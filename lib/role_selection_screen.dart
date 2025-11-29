@@ -2,6 +2,7 @@ import 'package:auditlab/app_router.dart';
 import 'package:auditlab/auth_service.dart';
 import 'package:auditlab/firestore_service.dart';
 import 'package:auditlab/widgets_role_card.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -54,6 +55,46 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     },
   ];
 
+  // Future<void> _confirmRole() async {
+  //   if (_selectedRole == null) {
+  //     ScaffoldMessenger.of(
+  //       context,
+  //     ).showSnackBar(const SnackBar(content: Text('Please select a role')));
+  //     return;
+  //   }
+
+  //   setState(() => _isLoading = true);
+
+  //   try {
+  //     final authService = Provider.of<AuthService>(context, listen: false);
+  //     final firestoreService = Provider.of<FirestoreService>(
+  //       context,
+  //       listen: false,
+  //     );
+  //     final userId = authService.currentUser!.uid;
+  //     final userEmail = authService.currentUser!.email!;
+
+  //     // Save role selection to Firestore (creates document if not exists)
+  //     await firestoreService.updateUserRole(userId, _selectedRole!, userEmail);
+
+  //     if (mounted) {
+  //       // Navigate to profile setup
+  //       Navigator.of(context).pushReplacementNamed(AppRouter.profileSetup);
+  //     }
+  //   } catch (e) {
+  //     if (mounted) {
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(
+  //           content: Text('Error: ${e.toString()}'),
+  //           backgroundColor: Colors.red,
+  //         ),
+  //       );
+  //     }
+  //   } finally {
+  //     if (mounted) setState(() => _isLoading = false);
+  //   }
+  // }
+
   Future<void> _confirmRole() async {
     if (_selectedRole == null) {
       ScaffoldMessenger.of(
@@ -73,13 +114,26 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       final userId = authService.currentUser!.uid;
       final userEmail = authService.currentUser!.email!;
 
-      // Save role selection to Firestore (creates document if not exists)
       await firestoreService.updateUserRole(userId, _selectedRole!, userEmail);
 
-      if (mounted) {
-        // Navigate to profile setup
-        Navigator.of(context).pushReplacementNamed(AppRouter.profileSetup);
+      // Wait for the user doc to exist and role field to be present
+      final userDocRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId);
+      // Wait up to ~5 seconds for the doc to appear
+      final sw = Stopwatch()..start();
+      while (sw.elapsed.inSeconds < 5) {
+        final snap = await userDocRef.get();
+        if (snap.exists && snap.data()?['role'] == _selectedRole) {
+          break;
+        }
+        await Future.delayed(const Duration(milliseconds: 250));
       }
+
+      if (!mounted) return;
+
+      // Navigate to profile setup
+      Navigator.of(context).pushReplacementNamed(AppRouter.profileSetup);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
