@@ -1,11 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:math';
-
 import 'package:uuid/uuid.dart';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:uuid/uuid.dart';
-import 'dart:math';
 
 /// Service to handle all Firestore database operations
 class FirestoreService {
@@ -22,6 +17,7 @@ class FirestoreService {
     required String phone,
     required String role,
     required String districtId,
+    required List<String> sectorCodes,
     String? profilePictureUrl,
   }) async {
     await _db.collection('users').doc(userId).set({
@@ -30,6 +26,7 @@ class FirestoreService {
       'phone': phone,
       'role': role,
       'districtId': districtId,
+      'sectorCodes': sectorCodes,
       'profilePictureUrl': profilePictureUrl,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
@@ -145,80 +142,71 @@ class FirestoreService {
 
   // ==================== CA ROLE REQUEST OPERATIONS ====================
 
-  /// Submit a CA role request
-  Future<void> submitCARequest({
-    required String districtId,
-    required String userId,
-  }) async {
-    // Check if user already has a pending request
-    final existing = await _db
-        .collection('districts')
-        .doc(districtId)
-        .collection('roleRequests')
-        .where('userId', isEqualTo: userId)
-        .where('status', isEqualTo: 'pending')
+  /// Get unavailable sector codes (sectors already assigned to Accountants)
+  Future<List<String>> getUnavailableSectorCodes(String districtId) async {
+    final accountants = await _db
+        .collection('users')
+        .where('districtId', isEqualTo: districtId)
+        .where('role', isEqualTo: 'Accountant')
         .get();
 
-    if (existing.docs.isNotEmpty) {
-      throw Exception('You already have a pending CA request');
+    final Set<String> unavailableCodes = {};
+    for (var doc in accountants.docs) {
+      final data = doc.data();
+      final sectorCodes = List<String>.from(data['sectorCodes'] ?? []);
+      unavailableCodes.addAll(sectorCodes);
     }
 
-    // Create new request
-    await _db
-        .collection('districts')
-        .doc(districtId)
-        .collection('roleRequests')
-        .add({
-          'requestedRole': 'CA',
-          'userId': userId,
-          'status': 'pending',
-          'requestedAt': FieldValue.serverTimestamp(),
-        });
+    return unavailableCodes.toList();
   }
 
-  /// Get all pending CA requests for a district
-  Stream<QuerySnapshot> streamPendingCARequests(String districtId) {
-    return _db
-        .collection('districts')
-        .doc(districtId)
-        .collection('roleRequests')
-        .where('status', isEqualTo: 'pending')
-        .orderBy('requestedAt', descending: true)
-        .snapshots();
-  }
-
-  /// Approve or reject CA request (DOF only)
-  Future<void> updateCARequestStatus({
+  /// Assign CA role to a user (DOF only)
+  /// Only Accountants with "Other" (000) sector can be assigned as CA
+  Future<void> assignCARole({
     required String districtId,
-    required String requestId,
-    required String status, // 'approved' or 'rejected'
     required String userId,
   }) async {
-    // Update request status
-    await _db
-        .collection('districts')
-        .doc(districtId)
-        .collection('roleRequests')
-        .doc(requestId)
-        .update({
-          'status': status,
-          'processedAt': FieldValue.serverTimestamp(),
-        });
-
-    // If approved, update user role to CA
-    if (status == 'approved') {
-      await _db.collection('users').doc(userId).update({
-        'role': 'CA',
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
+    // Get user data to verify they're eligible
+    final userDoc = await _db.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw Exception('User not found');
     }
+
+    final userData = userDoc.data()!;
+
+    // Verify user is an Accountant
+    if (userData['role'] != 'Accountant') {
+      throw Exception('Only Accountants can be assigned as CA');
+    }
+
+    // Verify user has "Other" (000) sector
+    final sectorCodes = List<String>.from(userData['sectorCodes'] ?? []);
+    if (!sectorCodes.contains('000')) {
+      throw Exception(
+        'Only Accountants with "Other" sector can be assigned as CA',
+      );
+    }
+
+    // Update user role to CA
+    await _db.collection('users').doc(userId).update({
+      'role': 'CA',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Remove CA role from a user (DOF only)
+  Future<void> removeCARole({required String userId}) async {
+    // Revert back to Accountant role
+    await _db.collection('users').doc(userId).update({
+      'role': 'Accountant',
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 
   /// Get user details for a CA request
   Future<Map<String, dynamic>?> getUserForRequest(String userId) async {
     return await getUserProfile(userId);
   }
-
   // ==================== DISTRICT MEMBERS ====================
 
   /// Get all users in a district
@@ -266,11 +254,14 @@ class FirestoreService {
 //   }
 
 //   /// Update user role selection (first step after signup)
-//   Future<void> updateUserRole(String userId, String role) async {
-//     await _db.collection('users').doc(userId).update({
+//   /// Creates the document if it doesn't exist
+//   Future<void> updateUserRole(String userId, String role, String email) async {
+//     await _db.collection('users').doc(userId).set({
 //       'role': role,
+//       'email': email,
+//       'createdAt': FieldValue.serverTimestamp(),
 //       'updatedAt': FieldValue.serverTimestamp(),
-//     });
+//     }, SetOptions(merge: true));
 //   }
 
 //   /// Stream user profile

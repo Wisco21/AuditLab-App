@@ -139,6 +139,7 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
         phone: _phoneController.text.trim(),
         role: _userRole!,
         districtId: districtId,
+        sectorCodes: [],
       );
 
       if (mounted) {
@@ -389,24 +390,32 @@ class _ProfileSetupScreenState extends State<ProfileSetupScreen> {
 
 //     try {
 //       final userData = await firestoreService.getUserProfile(userId);
-//       if (userData != null) {
-//         setState(() {
+
+//       setState(() {
+//         if (userData != null) {
 //           _userRole = userData['role'];
 //           _userEmail = userData['email'] ?? authService.currentUser!.email;
-//           _isAdminRole = _userRole == 'DOF' || _userRole == 'CA';
-//           _isLoading = false;
-//         });
-//       } else {
+//         } else {
+//           // Fallback if user data not found
+//           _userEmail = authService.currentUser!.email;
+//         }
+//         _isAdminRole = _userRole == 'DOF' || _userRole == 'CA';
+//         _isLoading = false;
+//       });
+//     } catch (e) {
+//       if (mounted) {
+//         // If there's an error, still show the screen with email
 //         setState(() {
 //           _userEmail = authService.currentUser!.email;
 //           _isLoading = false;
 //         });
-//       }
-//     } catch (e) {
-//       if (mounted) {
-//         ScaffoldMessenger.of(
-//           context,
-//         ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           SnackBar(
+//             content: Text('Please complete your profile setup'),
+//             backgroundColor: Colors.orange,
+//           ),
+//         );
 //       }
 //     }
 //   }

@@ -25,32 +25,25 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       'color': Colors.blue,
     },
     {
-      'role': 'CA',
-      'title': 'Chief Accountant',
-      'description': 'District administrator with full access',
-      'icon': Icons.account_balance,
-      'color': Colors.green,
-    },
-    {
-      'role': 'Auditor',
-      'title': 'Auditor',
-      'description': 'Review and audit financial documents',
-      'icon': Icons.description,
-      'color': Colors.orange,
-    },
-    {
-      'role': 'ICO',
-      'title': 'Internal Control Officer',
-      'description': 'Monitor internal controls and compliance',
-      'icon': Icons.security,
-      'color': Colors.purple,
-    },
-    {
       'role': 'Accountant',
       'title': 'Accountant',
       'description': 'Manage financial records and reports',
       'icon': Icons.calculate,
       'color': Colors.teal,
+    },
+    {
+      'role': 'Assistant Accountant',
+      'title': 'Assistant Accountant',
+      'description': 'Assist with financial record management',
+      'icon': Icons.account_balance_wallet,
+      'color': Colors.green,
+    },
+    {
+      'role': 'Accounts Assistant',
+      'title': 'Accounts Assistant',
+      'description': 'Support accounting operations',
+      'icon': Icons.assignment,
+      'color': Colors.orange,
     },
     {
       'role': 'Intern',
@@ -268,9 +261,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 //         listen: false,
 //       );
 //       final userId = authService.currentUser!.uid;
+//       final userEmail = authService.currentUser!.email!;
 
-//       // Save role selection to Firestore
-//       await firestoreService.updateUserRole(userId, _selectedRole!);
+//       // Save role selection to Firestore (creates document if not exists)
+//       await firestoreService.updateUserRole(userId, _selectedRole!, userEmail);
 
 //       if (mounted) {
 //         // Navigate to profile setup
