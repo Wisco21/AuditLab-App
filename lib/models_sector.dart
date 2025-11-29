@@ -2,10 +2,7 @@ class Sector {
   final String code;
   final String name;
 
-  const Sector({
-    required this.code,
-    required this.name,
-  });
+  const Sector({required this.code, required this.name});
 
   String get displayName => '$name ($code)';
 
@@ -32,16 +29,10 @@ class Sector {
   }
 
   // Convert to/from JSON
-  Map<String, dynamic> toJson() => {
-        'code': code,
-        'name': name,
-      };
+  Map<String, dynamic> toJson() => {'code': code, 'name': name};
 
   factory Sector.fromJson(Map<String, dynamic> json) {
-    return Sector(
-      code: json['code'],
-      name: json['name'],
-    );
+    return Sector(code: json['code'], name: json['name']);
   }
 
   @override
