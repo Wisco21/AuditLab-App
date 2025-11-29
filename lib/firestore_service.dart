@@ -7,32 +7,199 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
 
+  // ==================== DISTRICT OPERATIONS ====================
+
+  /// Create a new district with auto-generated join code
+  Future<String> createDistrict({
+    required String districtName,
+    required String districtCode,
+    required String createdBy,
+  }) async {
+    final districtId = _uuid.v4();
+    final joinCode = _generateJoinCode();
+    final expiresAt = DateTime.now().add(const Duration(hours: 24));
+
+    await _db.collection('districts').doc(districtId).set({
+      'districtId': districtId,
+      'districtCode': districtCode,
+      'districtName': districtName,
+      'createdBy': createdBy,
+      'createdAt': FieldValue.serverTimestamp(),
+      'joinCode': joinCode,
+      'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
+      'admins': [createdBy],
+    });
+
+    return districtId;
+  }
+
+  /// Get district by district code
+  Future<Map<String, dynamic>?> getDistrictByCode(String districtCode) async {
+    final query = await _db
+        .collection('districts')
+        .where('districtCode', isEqualTo: districtCode)
+        .limit(1)
+        .get();
+
+    if (query.docs.isEmpty) return null;
+
+    final doc = query.docs.first;
+    final data = doc.data();
+    return {'districtId': doc.id, ...data};
+  }
+
+  /// Validate district join code
+  Future<Map<String, dynamic>?> validateDistrictJoinCode({
+    required String districtCode,
+    required String joinCode,
+  }) async {
+    final districtData = await getDistrictByCode(districtCode);
+    if (districtData == null) return null;
+
+    // Check if join code matches
+    if (districtData['joinCode'] != joinCode.toUpperCase()) {
+      return null;
+    }
+
+    // Check if code is expired
+    final expiresAt = (districtData['joinCodeExpiresAt'] as Timestamp).toDate();
+    if (DateTime.now().isAfter(expiresAt)) {
+      throw Exception(
+        'Join code has expired. Please get a new code from your administrator.',
+      );
+    }
+
+    return districtData;
+  }
+
+  /// Generate a new join code for a district
+  Future<String> generateNewJoinCode(String districtId) async {
+    final joinCode = _generateJoinCode();
+    final expiresAt = DateTime.now().add(const Duration(hours: 24));
+
+    await _db.collection('districts').doc(districtId).update({
+      'joinCode': joinCode,
+      'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    return joinCode;
+  }
+
+  /// Update district with new admin
+  Future<void> updateDistrictAdmin({
+    required String districtId,
+    required String adminUserId,
+    required String adminRole,
+  }) async {
+    await _db.collection('districts').doc(districtId).update({
+      'admins': FieldValue.arrayUnion([adminUserId]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Check if role exists in district
+  Future<bool> checkExistingRoleInDistrict(
+    String districtCode,
+    String role,
+  ) async {
+    final query = await _db
+        .collection('users')
+        .where('districtCode', isEqualTo: districtCode)
+        .where('role', isEqualTo: role)
+        .limit(1)
+        .get();
+
+    return query.docs.isNotEmpty;
+  }
+
   // ==================== USER OPERATIONS ====================
 
-  // /// Create or update user profile
-  // Future<void> createUserProfile({
-  //   required String userId,
-  //   required String email,
-  //   required String name,
-  //   required String phone,
-  //   required String role,
-  //   required String districtId,
-  //   required List<String> sectorCodes,
-  //   String? profilePictureUrl,
-  // }) async {
-  //   await _db.collection('users').doc(userId).set({
-  //     'email': email,
-  //     'name': name,
-  //     'phone': phone,
-  //     'role': role,
-  //     'districtId': districtId,
-  //     'sectorCodes': sectorCodes,
-  //     'profilePictureUrl': profilePictureUrl,
-  //     'createdAt': FieldValue.serverTimestamp(),
-  //     'updatedAt': FieldValue.serverTimestamp(),
-  //   }, SetOptions(merge: true));
-  // }
+  /// Update user role and district information
+  Future<void> updateUserRoleAndDistrict(
+    String userId,
+    String role,
+    String email,
+    String districtCode,
+    String districtName,
+    String districtId,
+  ) async {
+    await _db.collection('users').doc(userId).set({
+      'role': role,
+      'email': email,
+      'districtCode': districtCode,
+      'districtName': districtName,
+      'districtId': districtId,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 
+  /// Create or update user profile
+  Future<void> createUserProfile({
+    required String userId,
+    required String email,
+    required String name,
+    required String phone,
+    required String role,
+    required String districtId,
+    required String districtCode,
+    required String districtName,
+    required List<String> sectorCodes,
+    String? profilePictureUrl,
+  }) async {
+    await _db.collection('users').doc(userId).set({
+      'email': email,
+      'name': name,
+      'phone': phone,
+      'role': role,
+      'districtId': districtId,
+      'districtCode': districtCode,
+      'districtName': districtName,
+      'sectorCodes': sectorCodes,
+      'profilePictureUrl': profilePictureUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  /// Helper to generate random alphanumeric join code
+  String _generateJoinCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous chars
+    final random = Random.secure();
+    return List.generate(
+      6,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
+
+  // ==================== DISTRICT-SPECIFIC DATA OPERATIONS ====================
+
+  /// Add financial record (district-specific)
+  Future<void> addFinancialRecord({
+    required String districtCode,
+    required Map<String, dynamic> recordData,
+  }) async {
+    final recordId = _uuid.v4();
+    await _db.collection('financial_records').doc(recordId).set({
+      'recordId': recordId,
+      'districtCode': districtCode,
+      ...recordData,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Get financial records for district
+  Stream<QuerySnapshot> getFinancialRecords(String districtCode) {
+    return _db
+        .collection('financial_records')
+        .where('districtCode', isEqualTo: districtCode)
+        .orderBy('createdAt', descending: true)
+        .snapshots();
+  }
+
+  // Similar methods for reports, transactions, etc.
+  //=========================================================================
   /// Get user profile
   Future<Map<String, dynamic>?> getUserProfile(String userId) async {
     final doc = await _db.collection('users').doc(userId).get();
@@ -56,27 +223,6 @@ class FirestoreService {
   }
 
   // ==================== DISTRICT OPERATIONS ====================
-
-  // /// Create a new district (DOF/CA only)
-  // Future<String> createDistrict({
-  //   required String districtName,
-  //   required String createdBy,
-  // }) async {
-  //   final districtId = _uuid.v4();
-  //   final joinCode = _generateJoinCode();
-  //   final expiresAt = DateTime.now().add(const Duration(hours: 24));
-
-  //   await _db.collection('districts').doc(districtId).set({
-  //     'districtId': districtId,
-  //     'districtName': districtName,
-  //     'createdBy': createdBy,
-  //     'createdAt': FieldValue.serverTimestamp(),
-  //     'joinCode': joinCode,
-  //     'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
-  //   });
-
-  //   return districtId;
-  // }
 
   /// Check if district exists by name
   Future<String?> getDistrictIdByName(String districtName) async {
@@ -115,29 +261,6 @@ class FirestoreService {
     }
 
     return query.docs.first.id;
-  }
-
-  /// Generate a new join code for a district
-  Future<String> generateNewJoinCode(String districtId) async {
-    final joinCode = _generateJoinCode();
-    final expiresAt = DateTime.now().add(const Duration(hours: 24));
-
-    await _db.collection('districts').doc(districtId).update({
-      'joinCode': joinCode,
-      'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
-    });
-
-    return joinCode;
-  }
-
-  /// Helper to generate random alphanumeric join code
-  String _generateJoinCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous chars
-    final random = Random.secure();
-    return List.generate(
-      8,
-      (index) => chars[random.nextInt(chars.length)],
-    ).join();
   }
 
   // ==================== CA ROLE REQUEST OPERATIONS ====================
@@ -215,142 +338,5 @@ class FirestoreService {
         .collection('users')
         .where('districtId', isEqualTo: districtId)
         .snapshots();
-  }
-
-  //   /// Check if a role already exists in a district
-  // Future<bool> checkExistingRoleInDistrict(String districtCode, String role) async {
-  //   final query = await _db
-  //       .collection('users')
-  //       .where('districtCode', isEqualTo: districtCode)
-  //       .where('role', isEqualTo: role)
-  //       .limit(1)
-  //       .get();
-
-  //   return query.docs.isNotEmpty;
-  // }
-
-  // /// Update user role and district
-  // Future<void> updateUserRoleAndDistrict(
-  //   String userId,
-  //   String role,
-  //   String email,
-  //   String districtCode,
-  //   String districtName,
-  // ) async {
-  //   await _db.collection('users').doc(userId).set({
-  //     'role': role,
-  //     'email': email,
-  //     'districtCode': districtCode,
-  //     'districtName': districtName,
-  //     'createdAt': FieldValue.serverTimestamp(),
-  //     'updatedAt': FieldValue.serverTimestamp(),
-  //   }, SetOptions(merge: true));
-  // }
-
-  // /// Create district with district code
-  // Future<String> createDistrict({
-  //   required String districtName,
-  //   required String districtCode,
-  //   required String createdBy,
-  // }) async {
-  //   final districtId = _uuid.v4();
-  //   final joinCode = _generateJoinCode();
-  //   final expiresAt = DateTime.now().add(const Duration(hours: 24));
-
-  //   await _db.collection('districts').doc(districtId).set({
-  //     'districtId': districtId,
-  //     'districtCode': districtCode,
-  //     'districtName': districtName,
-  //     'createdBy': createdBy,
-  //     'createdAt': FieldValue.serverTimestamp(),
-  //     'joinCode': joinCode,
-  //     'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
-  //   });
-
-  //   return districtId;
-  // }
-
-  /// Create or update user profile
-  Future<void> createUserProfile({
-    required String userId,
-    required String email,
-    required String name,
-    required String phone,
-    required String role,
-    required String districtId,
-    required String districtCode,
-    required String districtName,
-    required List<String> sectorCodes,
-    String? profilePictureUrl,
-  }) async {
-    await _db.collection('users').doc(userId).set({
-      'email': email,
-      'name': name,
-      'phone': phone,
-      'role': role,
-      'districtId': districtId,
-      'districtCode': districtCode,
-      'districtName': districtName,
-      'sectorCodes': sectorCodes,
-      'profilePictureUrl': profilePictureUrl,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  /// Update user role and district
-  Future<void> updateUserRoleAndDistrict(
-    String userId,
-    String role,
-    String email,
-    String districtCode,
-    String districtName,
-  ) async {
-    await _db.collection('users').doc(userId).set({
-      'role': role,
-      'email': email,
-      'districtCode': districtCode,
-      'districtName': districtName,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-  }
-
-  /// Check if a role already exists in a district
-  Future<bool> checkExistingRoleInDistrict(
-    String districtCode,
-    String role,
-  ) async {
-    final query = await _db
-        .collection('users')
-        .where('districtCode', isEqualTo: districtCode)
-        .where('role', isEqualTo: role)
-        .limit(1)
-        .get();
-
-    return query.docs.isNotEmpty;
-  }
-
-  /// Create district with district code
-  Future<String> createDistrict({
-    required String districtName,
-    required String districtCode,
-    required String createdBy,
-  }) async {
-    final districtId = _uuid.v4();
-    final joinCode = _generateJoinCode();
-    final expiresAt = DateTime.now().add(const Duration(hours: 24));
-
-    await _db.collection('districts').doc(districtId).set({
-      'districtId': districtId,
-      'districtCode': districtCode,
-      'districtName': districtName,
-      'createdBy': createdBy,
-      'createdAt': FieldValue.serverTimestamp(),
-      'joinCode': joinCode,
-      'joinCodeExpiresAt': Timestamp.fromDate(expiresAt),
-    });
-
-    return districtId;
   }
 }
