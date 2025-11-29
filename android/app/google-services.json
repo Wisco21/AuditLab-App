@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "254767491480",
+    "project_id": "auditlab-db5d4",
+    "storage_bucket": "auditlab-db5d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:254767491480:android:0f74458803a8084bf1a3ed",
+        "android_client_info": {
+          "package_name": "com.example.auditlab"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVx4X5zanl2aNZQtwXKJU75-1g-qVmbYI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
