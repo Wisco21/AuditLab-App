@@ -1,17 +1,18 @@
-import 'package:auditlab/auth_service.dart';
-import 'package:auditlab/widgets_auth_text_field.dart';
-import 'package:auditlab/widgets_primary_button.dart';
+import 'package:auditlab/phase2/fix_provider_scope.dart';
+import 'package:auditlab/widgets/widgets_auth_text_field.dart';
+import 'package:auditlab/widgets/widgets_primary_button.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() =>
+      _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   bool _isLoading = false;
@@ -29,7 +30,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final authService = Provider.of<AuthService>(context, listen: false);
+      // final authService = Provider.of<AuthService>(context, listen: false);
+      final authService = ref.watch(authServiceProvider);
       await authService.resetPassword(_emailController.text.trim());
 
       if (mounted) {

@@ -1,4 +1,4 @@
-import 'package:auditlab/models_sector.dart';
+import 'package:auditlab/models/models_sector.dart';
 import 'package:flutter/material.dart';
 
 class SectorSelector extends StatelessWidget {

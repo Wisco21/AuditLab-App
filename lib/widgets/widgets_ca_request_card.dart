@@ -1,4 +1,4 @@
-import 'package:auditlab/firestore_service.dart';
+import 'package:auditlab/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';

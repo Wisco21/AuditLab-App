@@ -1,10 +1,9 @@
-import 'package:auditlab/dof_ca_dashboard.dart';
-import 'package:auditlab/forgot_password_screen.dart';
-import 'package:auditlab/login_screen.dart';
-import 'package:auditlab/profile_setup_screen.dart';
+import 'package:auditlab/auth/auth_pages/forgot_password_screen.dart';
+import 'package:auditlab/auth/auth_pages/login_screen.dart';
+import 'package:auditlab/auth/auth_pages/profile_setup_screen.dart';
+import 'package:auditlab/auth/auth_pages/signup_screen.dart';
+import 'package:auditlab/phase2/universal_layout_main.dart';
 import 'package:auditlab/role_selection_screen.dart';
-import 'package:auditlab/signup_screen.dart';
-import 'package:auditlab/staff_dashboard.dart';
 import 'package:flutter/material.dart';
 
 /// Centralized app routing configuration
@@ -14,8 +13,9 @@ class AppRouter {
   static const String forgotPassword = '/forgot-password';
   static const String roleSelection = '/role-selection';
   static const String profileSetup = '/profile-setup';
-  static const String dofCaDashboard = '/dof-ca-dashboard';
-  static const String staffDashboard = '/staff-dashboard';
+  // static const String dofCaDashboard = '/dof-ca-dashboard';
+  // static const String staffDashboard = '/staff-dashboard';
+  static const String home = '/'; // Changed to universal layout
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -29,10 +29,12 @@ class AppRouter {
         return _buildRoute(const RoleSelectionScreen());
       case profileSetup:
         return _buildRoute(const ProfileSetupScreen());
-      case dofCaDashboard:
-        return _buildRoute(const DOFCADashboard());
-      case staffDashboard:
-        return _buildRoute(const StaffDashboard());
+      // case dofCaDashboard:
+      //   return _buildRoute(const DOFCADashboard());
+      // case staffDashboard:
+      //   return _buildRoute(const StaffDashboard());
+      case home:
+        return _buildRoute(const UniversalLayout()); // ← One layout for al
       default:
         return _buildRoute(
           Scaffold(

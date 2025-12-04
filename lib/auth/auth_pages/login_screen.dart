@@ -1,58 +1,47 @@
-import 'package:auditlab/app_router.dart';
-import 'package:auditlab/auth_service.dart';
-import 'package:auditlab/widgets_auth_text_field.dart';
-import 'package:auditlab/widgets_primary_button.dart';
+import 'package:auditlab/cores/app_router.dart';
+import 'package:auditlab/phase2/fix_provider_scope.dart';
+import 'package:auditlab/widgets/widgets_auth_text_field.dart';
+import 'package:auditlab/widgets/widgets_primary_button.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class SignupScreen extends StatefulWidget {
-  const SignupScreen({super.key});
+class LoginScreen extends ConsumerStatefulWidget {
+  const LoginScreen({super.key});
 
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _signup() async {
+  Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      await authService.signUp(
+      // final authService = Provider.of<AuthService>(context, listen: false);
+      final authService = ref.watch(authServiceProvider);
+      await authService.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
       if (mounted) {
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created! Please verify your email.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-
-        // Navigate to role selection
-        Navigator.of(context).pushReplacementNamed(AppRouter.roleSelection);
+        // Navigation handled by AuthWrapper
+        Navigator.of(context).pushReplacementNamed('/');
       }
     } catch (e) {
       if (mounted) {
@@ -68,7 +57,6 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Account'), centerTitle: true),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -76,28 +64,30 @@ class _SignupScreenState extends State<SignupScreen> {
             child: Form(
               key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Icon
+                  // Logo and Title
                   Icon(
-                    Icons.person_add_outlined,
+                    Icons.account_balance,
                     size: 80,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Sign Up',
+                    'Pre-Audit Tracking',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Create your account to get started',
+                    'Government Finance Office',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                    ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 48),
@@ -112,7 +102,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!value.contains('@') || !value.contains('.')) {
+                      if (!value.contains('@')) {
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -138,65 +128,43 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a password';
-                      }
-                      if (value.length < 6) {
-                        return 'Password must be at least 6 characters';
+                        return 'Please enter your password';
                       }
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
-                  // Confirm Password Field
-                  AuthTextField(
-                    controller: _confirmPasswordController,
-                    label: 'Confirm Password',
-                    obscureText: _obscureConfirmPassword,
-                    prefixIcon: Icons.lock_outline,
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
                       onPressed: () {
-                        setState(
-                          () => _obscureConfirmPassword =
-                              !_obscureConfirmPassword,
-                        );
+                        Navigator.pushNamed(context, AppRouter.forgotPassword);
                       },
+                      child: const Text('Forgot Password?'),
                     ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please confirm your password';
-                      }
-                      if (value != _passwordController.text) {
-                        return 'Passwords do not match';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Sign Up Button
-                  PrimaryButton(
-                    onPressed: _signup,
-                    isLoading: _isLoading,
-                    child: const Text('Sign Up'),
                   ),
                   const SizedBox(height: 24),
 
-                  // Login Link
+                  // Login Button
+                  PrimaryButton(
+                    onPressed: _login,
+                    isLoading: _isLoading,
+                    child: const Text('Login'),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text('Already have an account? '),
+                      const Text("Don't have an account? "),
                       TextButton(
                         onPressed: () {
-                          Navigator.pop(context);
+                          Navigator.pushNamed(context, AppRouter.signup);
                         },
-                        child: const Text('Login'),
+                        child: const Text('Sign Up'),
                       ),
                     ],
                   ),
