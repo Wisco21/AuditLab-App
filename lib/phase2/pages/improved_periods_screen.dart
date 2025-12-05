@@ -285,12 +285,29 @@ class PeriodsScreen extends ConsumerWidget {
         error: (error, stack) => Center(child: Text('Error: $error')),
       ),
       floatingActionButton: isSupervisor
-          ? FloatingActionButton.extended(
-              onPressed: () => _showCreatePeriodBottomSheet(context, ref),
-              icon: const Icon(Icons.add),
-              label: const Text('New Period'),
+          ? FutureBuilder<String?>(
+              future: ref.watch(userRoleProvider.future),
+              builder: (context, snapshot) {
+                final userRole = snapshot.data;
+                // Only show FAB for DOF and CA
+                if (userRole == 'DOF' || userRole == 'CA') {
+                  return FloatingActionButton.extended(
+                    onPressed: () => _showCreatePeriodBottomSheet(context, ref),
+                    icon: const Icon(Icons.add),
+                    label: const Text('New Period'),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             )
           : null,
+      // floatingActionButton: isSupervisor
+      //     ? FloatingActionButton.extended(
+      //         onPressed: () => _showCreatePeriodBottomSheet(context, ref),
+      //         icon: const Icon(Icons.add),
+      //         label: const Text('New Period'),
+      //       )
+      //     : null,
     );
   }
 
