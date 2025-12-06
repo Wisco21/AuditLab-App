@@ -114,10 +114,6 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     });
 
     try {
-      // final firestoreService = Provider.of<FirestoreService>(
-      //   context,
-      //   listen: false,
-      // );
       final firestoreService = ref.watch(firestoreServiceProvider);
 
       // Check for existing DOF and CA in the selected district
@@ -192,7 +188,6 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
       final currentUserIsCreator =
           _existingDistrictData!['createdBy'] ==
           ref.watch(authServiceProvider).currentUser!.uid;
-      // Provider.of<AuthService>(context, listen: false).currentUser!.uid;
 
       // Show role conflict warning if trying to take an existing role
       if ((isDOF && existingDOF && !currentUserIsCreator) ||
@@ -214,12 +209,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   }
 
   Future<bool> _checkRoleExists(String role) async {
-    // final firestoreService = Provider.of<FirestoreService>(
-    //   context,
-    //   listen: false,
-    // );
     final firestoreService = ref.watch(firestoreServiceProvider);
-
     return await firestoreService.checkExistingRoleInDistrict(
       _selectedDistrict!,
       role,
@@ -256,11 +246,6 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // final authService = Provider.of<AuthService>(context, listen: false);
-      // final firestoreService = Provider.of<FirestoreService>(
-      //   context,
-      //   listen: false,
-      // );
       final firestoreService = ref.watch(firestoreServiceProvider);
       final authService = ref.watch(authServiceProvider);
       final userId = authService.currentUser!.uid;
@@ -304,12 +289,7 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // final firestoreService = Provider.of<FirestoreService>(
-      //   context,
-      //   listen: false,
-      // );
       final firestoreService = ref.watch(firestoreServiceProvider);
-
       // Validate district join code
       final enteredCode = _districtCodeController.text.trim().toUpperCase();
       final districtData = await firestoreService.validateDistrictJoinCode(
@@ -343,11 +323,6 @@ class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   }
 
   Future<void> _saveUserRoleAndDistrict(String districtId) async {
-    // final authService = Provider.of<AuthService>(context, listen: false);
-    // final firestoreService = Provider.of<FirestoreService>(
-    //   context,
-    //   listen: false,
-    // );
     final firestoreService = ref.watch(firestoreServiceProvider);
     final authService = ref.watch(authServiceProvider);
     final userId = authService.currentUser!.uid;

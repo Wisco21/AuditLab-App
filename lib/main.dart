@@ -1,9 +1,9 @@
-import 'package:auditlab/auth/auth_pages/login_screen.dart';
-import 'package:auditlab/auth/auth_pages/profile_setup_screen.dart';
-import 'package:auditlab/cores/app_router.dart';
+import 'package:auditlab/phase_one_auth/auth/auth_pages/login_screen.dart';
+import 'package:auditlab/phase_one_auth/auth/auth_pages/profile_setup_screen.dart';
+import 'package:auditlab/phase_one_auth/cores/app_router.dart';
 import 'package:auditlab/firebase_options.dart';
-import 'package:auditlab/phase2/fix_provider_scope.dart';
-import 'package:auditlab/phase2/universal_layout_main.dart'
+import 'package:auditlab/phase_two_core_features/fix_provider_scope.dart';
+import 'package:auditlab/phase_two_core_features/universal_layout_main.dart'
     hide authServiceProvider;
 import 'package:auditlab/role_selection_screen.dart';
 import 'package:flutter/material.dart';
@@ -69,54 +69,6 @@ class MyApp extends StatelessWidget {
       home: const AuthWrapper(),
       onGenerateRoute: AppRouter.generateRoute,
     );
-    //  MultiProvider(
-    // providers: [
-    //   Provider<AuthService>(create: (_) => AuthService()),
-    //   Provider<FirestoreService>(create: (_) => FirestoreService()),
-    // ],
-    // child: MaterialApp(
-    //   title: 'AuditLab',
-    //   debugShowCheckedModeBanner: false,
-    //   theme: ThemeData(
-    //     colorScheme: ColorScheme.fromSeed(
-    //       seedColor: const Color(0xFF1976D2),
-    //       brightness: Brightness.light,
-    //     ),
-    //     useMaterial3: true,
-    //     inputDecorationTheme: InputDecorationTheme(
-    //       filled: true,
-    //       fillColor: Colors.grey.shade50,
-    //       border: OutlineInputBorder(
-    //         borderRadius: BorderRadius.circular(12),
-    //         borderSide: BorderSide.none,
-    //       ),
-    //       enabledBorder: OutlineInputBorder(
-    //         borderRadius: BorderRadius.circular(12),
-    //         borderSide: BorderSide(color: Colors.grey.shade300),
-    //       ),
-    //       focusedBorder: OutlineInputBorder(
-    //         borderRadius: BorderRadius.circular(12),
-    //         borderSide: const BorderSide(color: Color(0xFF1976D2), width: 2),
-    //       ),
-    //       errorBorder: OutlineInputBorder(
-    //         borderRadius: BorderRadius.circular(12),
-    //         borderSide: const BorderSide(color: Colors.red),
-    //       ),
-    //     ),
-    //     elevatedButtonTheme: ElevatedButtonThemeData(
-    //       style: ElevatedButton.styleFrom(
-    //         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-    //         shape: RoundedRectangleBorder(
-    //           borderRadius: BorderRadius.circular(12),
-    //         ),
-    //         elevation: 2,
-    //       ),
-    //     ),
-    //   ),
-    //   home: const AuthWrapper(),
-    //   onGenerateRoute: AppRouter.generateRoute,
-    // ),
-    // );
   }
 }
 
@@ -156,11 +108,6 @@ class OnboardingCheckScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final firestoreService = Provider.of<FirestoreService>(
-    //   context,
-    //   listen: false,
-    // );
-    // final authService = Provider.of<AuthService>(context, listen: false);
     final firestoreService = ref.watch(firestoreServiceProvider);
     final authService = ref.watch(authServiceProvider);
 
@@ -184,17 +131,8 @@ class OnboardingCheckScreen extends ConsumerWidget {
         if (!_isProfileComplete(userData)) {
           return const ProfileSetupScreen();
         }
-        // // Profile complete, go to appropriate dashboard
-        // final role = userData['role'] as String?;
-        // if (role == 'DOF' || role == 'CA') {
-        //   return const DOFCADashboard();
-        // } else {
-        //   return const StaffDashboard();
-        // }
+
         return const UniversalLayout();
-        // else {
-        //   return const UniversalLayout();
-        // }
       },
     );
   }
