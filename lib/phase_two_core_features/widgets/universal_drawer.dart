@@ -1,7 +1,12 @@
+
 import 'package:auditlab/phase_one_auth/auth/auth_service/auth_service.dart';
+import 'package:auditlab/phase_two_core_features/pages/notification_screen.dart';
 import 'package:auditlab/phase_two_core_features/universal_layout_main.dart';
+import 'package:auditlab/phase_three_support/notification_repository.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UniversalDrawer extends ConsumerWidget {
   final Map<String, dynamic> userData;
@@ -25,6 +30,7 @@ class UniversalDrawer extends ConsumerWidget {
     final userName = userData['name'] as String?;
     final userEmail = userData['email'] as String?;
     final districtName = userData['districtName'] as String?;
+    final userId = FirebaseAuth.instance.currentUser?.uid;
 
     return Drawer(
       child: Column(
@@ -54,6 +60,9 @@ class UniversalDrawer extends ConsumerWidget {
                   );
                 }),
 
+                // Notifications Item (separate from navItems)
+                _buildNotificationsTile(context, userId),
+
                 const Divider(),
 
                 // Settings
@@ -63,6 +72,7 @@ class UniversalDrawer extends ConsumerWidget {
                   onTap: () {
                     Navigator.pop(context);
                     // Navigate to settings
+                    Navigator.of(context).pushNamed('/settings');
                   },
                 ),
 
@@ -89,6 +99,45 @@ class UniversalDrawer extends ConsumerWidget {
           const SizedBox(height: 8),
         ],
       ),
+    );
+  }
+
+  Widget _buildNotificationsTile(BuildContext context, String? userId) {
+    final notificationRepo = NotificationRepository();
+    final unreadStream = userId != null 
+        ? notificationRepo.getUnreadCount(userId)
+        : Stream<int>.value(0);
+
+    return StreamBuilder<int>(
+      stream: unreadStream,
+      builder: (context, snapshot) {
+        final unreadCount = snapshot.data ?? 0;
+        
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          child: ListTile(
+            leading: badges.Badge(
+              showBadge: unreadCount > 0,
+              badgeContent: Text(
+                unreadCount > 99 ? '99+' : unreadCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+              child: const Icon(Icons.notifications),
+            ),
+            title: const Text('Notifications'),
+            onTap: () {
+              // Navigate to notifications screen
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationsScreen(),
+                ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 

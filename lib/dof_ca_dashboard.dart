@@ -621,7 +621,6 @@ class _DOFCADashboardState extends State<DOFCADashboard> {
     );
   }
 
-  // ... rest of your methods (_buildInfoRow, _assignCA, _removeCA, _signOut) remain the same
   Widget _buildInfoRow(IconData icon, String? text) {
     return Row(
       children: [

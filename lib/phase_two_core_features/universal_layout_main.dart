@@ -1,8 +1,8 @@
+import 'package:auditlab/dummy.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_service/auth_service.dart';
 import 'package:auditlab/phase_one_auth/cores/app_router.dart';
+import 'package:auditlab/phase_three_support/updated_assignments_page.dart';
 import 'package:auditlab/phase_two_core_features/pages/team_member_screen.dart';
-import 'package:auditlab/phase_two_core_features/pages/analytics_dashboard.dart';
-import 'package:auditlab/phase_two_core_features/pages/improved_assignments_screen.dart';
 import 'package:auditlab/phase_two_core_features/pages/improved_periods_screen.dart';
 import 'package:auditlab/phase_two_core_features/phase2_audit_logs_screen.dart';
 import 'package:auditlab/phase_two_core_features/provider/user_provider.dart';
@@ -56,13 +56,20 @@ class _UniversalLayoutState extends ConsumerState<UniversalLayout> {
     NavItem(
       label: 'Dashboard',
       icon: Icons.dashboard,
-      screen: ImprovedDashboard(),
+      // screen: ImprovedDashboard(),
+      screen: ModernDashboard(),
     ),
-    NavItem(label: 'Periods', icon: Icons.folder_open, screen: PeriodsScreen()),
+    // NavItem(label: 'Periods', icon: Icons.folder_open, screen: PeriodsScreen()),
+    NavItem(
+      label: 'Periods',
+      icon: Icons.folder_open,
+      screen: ModernPeriodsScreen(),
+    ),
     NavItem(
       label: 'My Assignments',
       icon: Icons.assignment_ind,
       screen: MyAssignmentsScreen(),
+      // screen: MyAssignmentsScreen(),
     ),
     NavItem(
       label: 'Audit Logs',

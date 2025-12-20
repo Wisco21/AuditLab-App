@@ -1,8 +1,7 @@
+
 import 'package:auditlab/models/cheque.dart';
 import 'package:auditlab/models/folder.dart';
-import 'package:auditlab/models/period.dart';
 import 'package:auditlab/phase_two_core_features/pages/improved_cheque_details.dart';
-import 'package:auditlab/phase_two_core_features/pages/improved_folders_screen.dart';
 import 'package:auditlab/phase_two_core_features/provider/cheque_provider.dart';
 import 'package:auditlab/phase_two_core_features/provider/user_provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -15,8 +14,7 @@ class MyAssignmentsScreen extends ConsumerStatefulWidget {
   const MyAssignmentsScreen({super.key});
 
   @override
-  ConsumerState<MyAssignmentsScreen> createState() =>
-      _MyAssignmentsScreenState();
+  ConsumerState<MyAssignmentsScreen> createState() => _MyAssignmentsScreenState();
 }
 
 class _MyAssignmentsScreenState extends ConsumerState<MyAssignmentsScreen> {
@@ -58,153 +56,7 @@ class _MyAssignmentsScreenState extends ConsumerState<MyAssignmentsScreen> {
             );
           }
 
-          final chequesAsync = ref.watch(
-            userChequesProvider((districtId: districtId, userId: user.uid)),
-          );
-
-          return Column(
-            children: [
-              // Stats Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.7),
-                    ],
-                  ),
-                ),
-                child: chequesAsync.when(
-                  data: (cheques) => _buildStatsHeader(context, cheques),
-                  loading: () => const SizedBox(height: 80),
-                  error: (_, __) => const SizedBox(height: 80),
-                ),
-              ),
-
-              // Active Filter Indicator
-              if (_filterStatus != 'all')
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      Chip(
-                        label: Text('Filter: ${_getFilterLabel()}'),
-                        onDeleted: () => setState(() => _filterStatus = 'all'),
-                        deleteIcon: const Icon(Icons.close, size: 18),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Assignments List
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    ref.invalidate(
-                      userChequesProvider((
-                        districtId: districtId,
-                        userId: user.uid,
-                      )),
-                    );
-                  },
-                  child: chequesAsync.when(
-                    data: (cheques) {
-                      // Apply filter
-                      final filteredCheques = _filterCheques(cheques);
-
-                      if (filteredCheques.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: Colors.blue.withOpacity(0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.assignment_outlined,
-                                  size: 80,
-                                  color: Colors.blue[300],
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              Text(
-                                _filterStatus == 'all'
-                                    ? 'No assignments yet'
-                                    : 'No ${_getFilterLabel().toLowerCase()} assignments',
-                                style: Theme.of(context).textTheme.headlineSmall
-                                    ?.copyWith(fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 48,
-                                ),
-                                child: Text(
-                                  _filterStatus == 'all'
-                                      ? 'Cheques assigned to you will appear here'
-                                      : 'Try changing the filter to see other assignments',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.grey[600],
-                                    fontSize: 15,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
-
-                      return ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: filteredCheques.length,
-                        itemBuilder: (context, index) {
-                          final cheque = filteredCheques[index];
-                          return _AssignmentCard(
-                            cheque: cheque,
-                            districtId: districtId,
-                          );
-                        },
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (error, stack) => Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: Colors.red,
-                          ),
-                          const SizedBox(height: 16),
-                          Text('Error: $error'),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () => ref.invalidate(
-                              userChequesProvider((
-                                districtId: districtId,
-                                userId: user.uid,
-                              )),
-                            ),
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          );
+          return _buildAssignmentsContent(districtId, user.uid);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stack) => Center(
@@ -218,6 +70,146 @@ class _MyAssignmentsScreenState extends ConsumerState<MyAssignmentsScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildAssignmentsContent(String districtId, String userId) {
+    final chequesAsync = ref.watch(
+      userChequesProvider((districtId: districtId, userId: userId)),
+    );
+
+    return Column(
+      children: [
+        // Stats Header
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).primaryColor,
+                Theme.of(context).primaryColor.withOpacity(0.7),
+              ],
+            ),
+          ),
+          child: chequesAsync.when(
+            data: (cheques) => _buildStatsHeader(context, cheques),
+            loading: () => const SizedBox(height: 80),
+            error: (_, __) => const SizedBox(height: 80),
+          ),
+        ),
+
+        // Active Filter Indicator
+        if (_filterStatus != 'all')
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                Chip(
+                  label: Text('Filter: ${_getFilterLabel()}'),
+                  onDeleted: () => setState(() => _filterStatus = 'all'),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                ),
+              ],
+            ),
+          ),
+
+        // Assignments List
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () async {
+              ref.invalidate(
+                userChequesProvider((districtId: districtId, userId: userId)),
+              );
+            },
+            child: chequesAsync.when(
+              data: (cheques) {
+                final filteredCheques = _filterCheques(cheques);
+
+                if (filteredCheques.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(32),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.assignment_outlined,
+                            size: 80,
+                            color: Colors.blue[300],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          _filterStatus == 'all'
+                              ? 'No assignments yet'
+                              : 'No ${_getFilterLabel().toLowerCase()} assignments',
+                          style: Theme.of(context).textTheme.headlineSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 48),
+                          child: Text(
+                            _filterStatus == 'all'
+                                ? 'Cheques assigned to you will appear here'
+                                : 'Try changing the filter to see other assignments',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filteredCheques.length,
+                  itemBuilder: (context, index) {
+                    final cheque = filteredCheques[index];
+                    return _AssignmentCard(
+                      cheque: cheque,
+                      districtId: districtId,
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, stack) => Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 16),
+                    Text('Error: $error'),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => ref.invalidate(
+                        userChequesProvider((
+                          districtId: districtId,
+                          userId: userId,
+                        )),
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -489,12 +481,7 @@ class _AssignmentCard extends ConsumerWidget {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => NavigationHelper.navigateToChequeFromAssignment(
-          context: context,
-          districtId: districtId,
-          cheque: cheque,
-        ),
-        // onTap: () => _navigateToChequeDetails(context, ref),
+        onTap: () => _navigateToChequeDetails(context, ref),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -650,8 +637,6 @@ class _AssignmentCard extends ConsumerWidget {
     );
   }
 
-  // Update the _navigateToChequeDetails method in _AssignmentCard:
-
   Future<void> _navigateToChequeDetails(
     BuildContext context,
     WidgetRef ref,
@@ -694,7 +679,6 @@ class _AssignmentCard extends ConsumerWidget {
       final folder = Folder.fromJson(folderDoc.data()!);
 
       if (context.mounted) {
-        // OPTION 1: Direct navigation (simple)
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -705,19 +689,6 @@ class _AssignmentCard extends ConsumerWidget {
             ),
           ),
         );
-
-        // OPTION 2: Named route navigation (if you prefer named routes)
-        /*
-      Navigator.pushNamed(
-        context,
-        AppRouter.chequeDetails,
-        arguments: ChequeDetailsArgs(
-          districtId: districtId,
-          folder: folder,
-          cheque: cheque,
-        ),
-      );
-      */
       }
     } catch (e) {
       // Close loading dialog if still showing
@@ -740,56 +711,6 @@ class _AssignmentCard extends ConsumerWidget {
       }
     }
   }
-
-  // Future<void> _navigateToChequeDetails(
-  //   BuildContext context,
-  //   WidgetRef ref,
-  // ) async {
-  //   try {
-  //     // Fetch the folder information from Firestore
-  //     final folderDoc = await FirebaseFirestore.instance
-  //         .collection('districts')
-  //         .doc(districtId)
-  //         .collection('periods')
-  //         .doc(cheque.periodId)
-  //         .collection('folders')
-  //         .doc(cheque.folderId)
-  //         .get();
-
-  //     if (!folderDoc.exists) {
-  //       if (context.mounted) {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           const SnackBar(
-  //             content: Text('Folder not found'),
-  //             backgroundColor: Colors.red,
-  //           ),
-  //         );
-  //       }
-  //       return;
-  //     }
-
-  //     final folder = Folder.fromJson(folderDoc.data()!);
-
-  //     if (context.mounted) {
-  //       Navigator.push(
-  //         context,
-  //         MaterialPageRoute(
-  //           builder: (_) => ChequeDetailsScreen(
-  //             districtId: districtId,
-  //             folder: folder,
-  //             cheque: cheque,
-  //           ),
-  //         ),
-  //       );
-  //     }
-  //   } catch (e) {
-  //     if (context.mounted) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-  //       );
-  //     }
-  //   }
-  // }
 
   Color _getStatusColor(String status) {
     switch (status) {
@@ -860,119 +781,5 @@ class _StatusChip extends StatelessWidget {
       default:
         return Colors.blue;
     }
-  }
-}
-
-class NavigationHelper {
-  /// Navigate to cheque details from assignment
-  static Future<void> navigateToChequeFromAssignment({
-    required BuildContext context,
-    required String districtId,
-    required Cheque cheque,
-  }) async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading cheque details...'),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    try {
-      // Fetch folder data
-      final folderDoc = await FirebaseFirestore.instance
-          .collection('districts')
-          .doc(districtId)
-          .collection('periods')
-          .doc(cheque.periodId)
-          .collection('folders')
-          .doc(cheque.folderId)
-          .get();
-
-      if (!context.mounted) return;
-
-      // Close loading
-      Navigator.pop(context);
-
-      if (!folderDoc.exists) {
-        _showError(context, 'Folder not found');
-        return;
-      }
-
-      final folder = Folder.fromJson(folderDoc.data()!);
-
-      // Navigate to cheque details
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChequeDetailsScreen(
-            districtId: districtId,
-            folder: folder,
-            cheque: cheque,
-          ),
-        ),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-
-      // Close loading if still open
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-
-      _showError(context, 'Error: $e');
-    }
-  }
-
-  /// Navigate to folder details
-  static void navigateToFolder({
-    required BuildContext context,
-    required String districtId,
-    required Folder folder,
-    required Period period,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => FoldersScreen(districtId: districtId, period: period),
-      ),
-    );
-  }
-
-  /// Navigate to period details
-  static void navigateToPeriod({
-    required BuildContext context,
-    required String districtId,
-    required Period period,
-  }) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => FoldersScreen(districtId: districtId, period: period),
-      ),
-    );
-  }
-
-  static void _showError(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 }

@@ -2,17 +2,23 @@ import 'package:auditlab/phase_one_auth/auth/auth_pages/login_screen.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_pages/profile_setup_screen.dart';
 import 'package:auditlab/phase_one_auth/cores/app_router.dart';
 import 'package:auditlab/firebase_options.dart';
+import 'package:auditlab/phase_three_support/notification_service.dart';
 import 'package:auditlab/phase_two_core_features/fix_provider_scope.dart';
 import 'package:auditlab/phase_two_core_features/universal_layout_main.dart'
     hide authServiceProvider;
 import 'package:auditlab/role_selection_screen.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' hide Provider;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Initialize Notification Service
+  await NotificationService().initialize();
   // runApp(const MyApp());
   runApp(
     const ProviderScope(
@@ -143,4 +149,13 @@ class OnboardingCheckScreen extends ConsumerWidget {
         userData['role'] != null &&
         userData['districtId'] != null;
   }
+}
+
+// ===== BACKGROUND NOTIFICATION HANDLER =====
+// Add this function outside the main() function
+@pragma('vm:entry-point')
+void notificationBackgroundHandler(NotificationResponse response) {
+  print('Notification tapped in background: ${response.payload}');
+  // You can add navigation logic here if needed
+  // Note: This won't have access to Navigator context
 }

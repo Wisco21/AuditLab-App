@@ -1,10 +1,10 @@
 // lib/services/core/issue_service.dart
 import 'package:auditlab/models/audit_log.dart';
 import 'package:auditlab/models/issue.dart';
+import 'package:auditlab/phase_three_support/integrated_cheque_service.dart';
 import 'package:auditlab/phase_three_support/notification_repository.dart';
+import 'package:auditlab/phase_two_core_features/core_services/audit_log_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'audit_log_service.dart';
-import 'cheque_service.dart';
 
 class IssueService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -12,7 +12,7 @@ class IssueService {
   final ChequeService _chequeService = ChequeService();
   final NotificationRepository _notificationRepo = NotificationRepository();
 
-  /// Add issue to cheque with notifications
+  /// Add issue to cheque
   Future<void> addIssue({
     required String districtId,
     required String periodId,
@@ -24,13 +24,6 @@ class IssueService {
     required String userName,
     required String userRole,
   }) async {
-    print('═══════════════════════════════════════════');
-    print('🐛 ADDING ISSUE TO CHEQUE');
-    print('═══════════════════════════════════════════');
-    print('Cheque ID: $chequeId');
-    print('Issue type: $type');
-    print('Reported by: $userName ($createdBy)');
-
     final issue = Issue(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       type: type,
@@ -50,17 +43,13 @@ class IssueService {
         .collection('cheques')
         .doc(chequeId);
 
-    // Update cheque with issue
-    print('💾 Updating cheque with issue...');
     await chequeRef.update({
       'issues': FieldValue.arrayUnion([issue.toJson()]),
       'status': 'Has Issues',
       'lastUpdatedBy': createdBy,
       'updatedAt': FieldValue.serverTimestamp(),
     });
-    print('✅ Issue added to cheque');
 
-    // Log the action
     await _auditLogService.logAction(
       districtId: districtId,
       userId: createdBy,
@@ -74,24 +63,12 @@ class IssueService {
     );
 
     // ============= NOTIFICATION INTEGRATION =============
-    print('═══════════════════════════════════════════');
-    print('📬 SENDING ISSUE NOTIFICATIONS');
-    print('═══════════════════════════════════════════');
-
-    try {
-      // Get cheque details
-      final chequeDoc = await chequeRef.get();
-      if (!chequeDoc.exists) {
-        print('⚠️ Cheque document not found');
-        return;
-      }
-
+    // Get cheque details to find who to notify
+    final chequeDoc = await chequeRef.get();
+    if (chequeDoc.exists) {
       final chequeData = chequeDoc.data()!;
       final chequeNumber = chequeData['chequeNumber'] as String?;
       final assignedTo = chequeData['assignedTo'] as String?;
-
-      print('📄 Cheque number: $chequeNumber');
-      print('👤 Assigned to: $assignedTo');
 
       // Get supervisor from period
       final periodDoc = await _db
@@ -102,47 +79,34 @@ class IssueService {
           .get();
 
       final supervisorId = periodDoc.data()?['supervisorId'] as String?;
-      print('👤 Period supervisor: $supervisorId');
 
       // Build list of people to notify
       List<String> recipientIds = [];
 
-      // 1. Notify supervisor (if not the reporter)
+      // Notify supervisor
       if (supervisorId != null && supervisorId != createdBy) {
         recipientIds.add(supervisorId);
-        print('✉️ Will notify supervisor: $supervisorId');
       }
 
-      // 2. Notify assigned user (if exists and not the reporter)
-      if (assignedTo != null && 
-          assignedTo != createdBy && 
-          !recipientIds.contains(assignedTo)) {
+      // Notify assigned user
+      if (assignedTo != null && assignedTo != createdBy) {
         recipientIds.add(assignedTo);
-        print('✉️ Will notify assigned user: $assignedTo');
       }
 
       // Send notifications
       if (recipientIds.isNotEmpty && chequeNumber != null) {
-        print('📤 Sending to ${recipientIds.length} recipient(s)');
         await _notificationRepo.notifyIssueReported(
           recipientIds: recipientIds,
           chequeNumber: chequeNumber,
           issueType: _getIssueTypeLabel(type),
           reportedByName: userName,
         );
-        print('✅ Notifications sent successfully');
-      } else {
-        print('⚠️ No recipients or missing cheque number');
       }
-    } catch (e, stackTrace) {
-      print('❌ Error sending notifications: $e');
-      print('Stack trace: $stackTrace');
-      // Don't rethrow - issue was added successfully
     }
-    print('═══════════════════════════════════════════');
+    // ============= END NOTIFICATION INTEGRATION =============
   }
 
-  /// Resolve issue with notifications
+  /// Resolve issue
   Future<void> resolveIssue({
     required String districtId,
     required String periodId,
@@ -154,12 +118,6 @@ class IssueService {
     required String userRole,
     String? resolutionNotes,
   }) async {
-    print('═══════════════════════════════════════════');
-    print('✅ RESOLVING ISSUE');
-    print('═══════════════════════════════════════════');
-    print('Issue ID: $issueId');
-    print('Resolved by: $userName ($resolvedBy)');
-
     final cheque = await _chequeService.getCheque(
       districtId,
       periodId,
@@ -174,9 +132,6 @@ class IssueService {
       (issue) => issue.id == issueId,
       orElse: () => throw Exception('Issue not found'),
     );
-
-    print('🐛 Issue type: ${resolvedIssue.type}');
-    print('👤 Originally reported by: ${resolvedIssue.createdBy}');
 
     final updatedIssues = cheque.issues.map((issue) {
       if (issue.id == issueId) {
@@ -196,9 +151,6 @@ class IssueService {
     );
     final newStatus = allResolved ? 'Cleared' : 'Has Issues';
 
-    print('📊 All issues resolved: $allResolved');
-    print('📊 New cheque status: $newStatus');
-
     await _db
         .collection('districts')
         .doc(districtId)
@@ -209,11 +161,11 @@ class IssueService {
         .collection('cheques')
         .doc(chequeId)
         .update({
-      'issues': updatedIssues.map((e) => e.toJson()).toList(),
-      'status': newStatus,
-      'lastUpdatedBy': resolvedBy,
-      'updatedAt': FieldValue.serverTimestamp(),
-    });
+          'issues': updatedIssues.map((e) => e.toJson()).toList(),
+          'status': newStatus,
+          'lastUpdatedBy': resolvedBy,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
 
     await _auditLogService.logAction(
       districtId: districtId,
@@ -227,66 +179,47 @@ class IssueService {
     );
 
     // ============= NOTIFICATION INTEGRATION =============
-    print('═══════════════════════════════════════════');
-    print('📬 SENDING RESOLUTION NOTIFICATIONS');
-    print('═══════════════════════════════════════════');
+    // Notify people about issue resolution
+    List<String> recipientIds = [];
 
-    try {
-      List<String> recipientIds = [];
-
-      // 1. Notify the person who reported the issue (if not the resolver)
-      if (resolvedIssue.createdBy != resolvedBy) {
-        recipientIds.add(resolvedIssue.createdBy);
-        print('✉️ Will notify reporter: ${resolvedIssue.createdBy}');
-      }
-
-      // 2. Notify supervisor (if exists and not the resolver)
-      final periodDoc = await _db
-          .collection('districts')
-          .doc(districtId)
-          .collection('periods')
-          .doc(periodId)
-          .get();
-
-      final supervisorId = periodDoc.data()?['supervisorId'] as String?;
-      if (supervisorId != null && 
-          supervisorId != resolvedBy && 
-          !recipientIds.contains(supervisorId)) {
-        recipientIds.add(supervisorId);
-        print('✉️ Will notify supervisor: $supervisorId');
-      }
-
-      // 3. Notify assigned user (if exists and not the resolver)
-      if (cheque.assignedTo != null && 
-          cheque.assignedTo != resolvedBy &&
-          !recipientIds.contains(cheque.assignedTo)) {
-        recipientIds.add(cheque.assignedTo!);
-        print('✉️ Will notify assigned user: ${cheque.assignedTo}');
-      }
-
-      // Send notifications
-      if (recipientIds.isNotEmpty) {
-        print('📤 Sending to ${recipientIds.length} recipient(s)');
-        await _notificationRepo.notifyIssueResolved(
-          recipientIds: recipientIds,
-          chequeNumber: cheque.chequeNumber,
-          issueType: _getIssueTypeLabel(resolvedIssue.type),
-          resolvedByName: userName,
-        );
-        print('✅ Notifications sent successfully');
-      } else {
-        print('ℹ️ No recipients to notify (resolver handled everything)');
-      }
-    } catch (e, stackTrace) {
-      print('❌ Error sending notifications: $e');
-      print('Stack trace: $stackTrace');
-      // Don't rethrow - resolution succeeded
+    // Notify the person who reported the issue
+    if (resolvedIssue.createdBy != resolvedBy) {
+      recipientIds.add(resolvedIssue.createdBy);
     }
-    print('═══════════════════════════════════════════');
+
+    // Notify supervisor
+    final periodDoc = await _db
+        .collection('districts')
+        .doc(districtId)
+        .collection('periods')
+        .doc(periodId)
+        .get();
+
+    final supervisorId = periodDoc.data()?['supervisorId'] as String?;
+    if (supervisorId != null && supervisorId != resolvedBy) {
+      recipientIds.add(supervisorId);
+    }
+
+    // Notify assigned user
+    if (cheque.assignedTo != null &&
+        cheque.assignedTo != resolvedBy &&
+        !recipientIds.contains(cheque.assignedTo)) {
+      recipientIds.add(cheque.assignedTo!);
+    }
+
+    // Send notifications
+    if (recipientIds.isNotEmpty) {
+      await _notificationRepo.notifyIssueResolved(
+        recipientIds: recipientIds,
+        chequeNumber: cheque.chequeNumber,
+        issueType: _getIssueTypeLabel(resolvedIssue.type),
+        resolvedByName: userName,
+      );
+    }
+    // ============= END NOTIFICATION INTEGRATION =============
 
     // Update cheque status if all issues resolved
     if (allResolved) {
-      print('🔄 Updating cheque status to Cleared...');
       await _chequeService.updateChequeStatus(
         districtId: districtId,
         periodId: periodId,

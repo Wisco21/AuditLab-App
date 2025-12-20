@@ -1,10 +1,11 @@
+import 'package:auditlab/dummy.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_pages/forgot_password_screen.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_pages/login_screen.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_pages/profile_setup_screen.dart';
 import 'package:auditlab/phase_one_auth/auth/auth_pages/signup_screen.dart';
 import 'package:auditlab/models/cheque.dart';
 import 'package:auditlab/models/folder.dart';
-import 'package:auditlab/phase_two_core_features/pages/analytics_dashboard.dart';
+import 'package:auditlab/phase_three_support/settings_page.dart';
 import 'package:auditlab/phase_two_core_features/pages/improved_cheque_details.dart';
 import 'package:auditlab/phase_two_core_features/pages/improved_cheque_section.dart';
 import 'package:auditlab/role_selection_screen.dart';
@@ -23,6 +24,7 @@ class AppRouter {
   static const String periodDetails = '/period-details';
   static const String folderDetails = '/folder-details';
   static const String chequeDetails = '/cheque-details';
+  static const String settingsPage = '/settings';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -38,7 +40,8 @@ class AppRouter {
         return _buildRoute(const ProfileSetupScreen());
 
       case home:
-        return _buildRoute(const ImprovedDashboard()); // ← One layout for all
+        // return _buildRoute(const ImprovedDashboard()); // ← One layout for all
+        return _buildRoute(const ModernDashboard()); // ← One layout for all
       // Deep navigation routes
       case chequeDetails:
         if (settings.arguments is ChequeDetailsArgs) {
@@ -66,6 +69,15 @@ class AppRouter {
               folder: args.folder,
             ),
           );
+        }
+        return _buildRoute(
+          Scaffold(
+            body: Center(child: Text('No route defined for ${settings.name}')),
+          ),
+        );
+      case settingsPage:
+        if (settings.arguments == null) {
+          return _buildRoute(const SettingsScreen());
         }
         return _buildRoute(
           Scaffold(
